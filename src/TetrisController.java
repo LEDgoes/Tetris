@@ -1,7 +1,12 @@
 import java.awt.*;
-import java.util.Random;
+import java.util.*;
+import java.io.*;
 
-//import RXTXcomm.*;
+import gnu.io.CommPort;
+import gnu.io.CommPortIdentifier;
+import gnu.io.SerialPort;
+import gnu.io.*;
+
 
 public class TetrisController {
 	
@@ -12,6 +17,8 @@ public class TetrisController {
 	private boolean isPaused;
 	//private int score;
 	
+	private OutputStream out;
+	
 	private int dropCount;
 	public TetrisController()
 	{
@@ -21,6 +28,46 @@ public class TetrisController {
 		isAlive=true;
 		isPaused=false;
 		//score=0;
+		//out = serialPort.getOutputStream();
+		try {
+			CommPortIdentifier portIdentifier = CommPortIdentifier.getPortIdentifier("COM4");
+		    if ( portIdentifier.isCurrentlyOwned() )
+		    {
+		        System.out.println("Error: Port is currently in use");
+		    }
+		    else
+		    {
+		        System.out.println("Connect 1/2");
+		        CommPort commPort = portIdentifier.open(this.getClass().getName(),6000);
+
+		        if ( commPort instanceof SerialPort )
+		        {
+		            System.out.println("Connect 2/2");
+		            SerialPort serialPort = (SerialPort) commPort;
+		            System.out.println("BaudRate: " + serialPort.getBaudRate());
+		            System.out.println("DataBIts: " + serialPort.getDataBits());
+		            System.out.println("StopBits: " + serialPort.getStopBits());
+		            System.out.println("Parity: " + serialPort.getParity());
+		            System.out.println("FlowControl: " + serialPort.getFlowControlMode());
+		            serialPort.setSerialPortParams(9600,SerialPort.DATABITS_8,SerialPort.STOPBITS_1,SerialPort.PARITY_NONE);
+		            serialPort.setFlowControlMode(SerialPort.FLOWCONTROL_NONE);
+		            System.out.println("BaudRate: " + serialPort.getBaudRate());
+		            System.out.println("DataBIts: " + serialPort.getDataBits());
+		            System.out.println("StopBits: " + serialPort.getStopBits());
+		            System.out.println("Parity: " + serialPort.getParity());
+		            System.out.println("FlowControl: " + serialPort.getFlowControlMode());
+		           // InputStream in = serialPort.getInputStream();
+		            out = serialPort.getOutputStream();
+//		            out.write(redBytes);
+//		            out.write(greenBytes);
+		        }
+		    }
+			}
+			catch (Exception e)
+			{
+				System.out.print(e.getMessage());
+			}
+			
 	}
 	
 	public void newGame()
@@ -143,24 +190,15 @@ public class TetrisController {
 		//System.out.print("]");
 		System.out.println();
 		
-		
-		SerialPort serialPort = new SerialPort("tty.usbserial-A900fuGj");
-		for (String portt:SerialPortList.getPortNames())
+		try
 		{
-			System.out.println(portt);
+			out.write(redBytes);
+			out.write(greenBytes);
 		}
-	
-        try {
-            System.out.println("Port opened: " + serialPort.openPort());
-            System.out.println("Params setted: " + serialPort.setParams(9600, 8, 1, 0));
-            System.out.println("\"Hello World!!!\" successfully writen to port: " + serialPort.writeBytes(greenBytes));
-            System.out.println("\"Hello World!!!\" successfully writen to port: " + serialPort.writeBytes(redBytes));
-            System.out.println("Port closed: " + serialPort.closePort());
-        }
-        catch (SerialPortException ex){
-            System.out.println(ex);
-        }
-		
+		catch (Exception e)
+		{
+			System.out.println(e);
+		}
 		//isPaused=prevPauseState;
 	}
 	
@@ -239,6 +277,7 @@ public class TetrisController {
 	
 	public void draw(Graphics g)
 	{
+		printLEDNumbers();
 		if (isAlive && !isPaused)
 		{
 			advance();
@@ -253,8 +292,8 @@ public class TetrisController {
 			g.setColor(Color.red);
 			g.drawString("GAME OVER (press 'N' for new game)", 200, 40);
 		}
-		board.draw(g);
-		drawCurrentPiece(g);
+		//board.draw(g);
+		//drawCurrentPiece(g);
 		g.setColor(Color.red);
 		g.drawString("Score: "+Integer.toString(board.getScore()), 200, 475);
 	}
@@ -280,7 +319,7 @@ public class TetrisController {
 	private void advance()
 	{
 		dropCount++;
-		if (dropCount==25)
+		if (dropCount==15)
 		{
 			Point check=new Point(pieceCorner.getX()+1,pieceCorner.getY());
 			boolean isDropGood=board.canFit(currentPiece.getPiece(), check);
